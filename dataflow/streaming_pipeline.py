@@ -10,6 +10,7 @@ from typing import Dict, Any, Tuple
 from datetime import datetime
 
 import apache_beam as beam
+from apache_beam import pvalue
 from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions, GoogleCloudOptions
 from apache_beam.io import ReadFromPubSub, WriteToBigQuery
 from apache_beam.transforms.window import FixedWindows
@@ -33,7 +34,7 @@ class ParseClaimJson(beam.DoFn):
         """
         try:
             claim = json.loads(element.decode('utf-8'))
-            yield beam.pvalue.TaggedOutput('success', claim)
+            yield pvalue.TaggedOutput('success', claim)
         except json.JSONDecodeError as e:
             logging.error(f"JSON decode error: {e}")
             error_record = {
@@ -41,10 +42,10 @@ class ParseClaimJson(beam.DoFn):
                 'error': str(e),
                 'error_timestamp': datetime.utcnow().isoformat()
             }
-            yield beam.pvalue.TaggedOutput('errors', error_record)
+            yield pvalue.TaggedOutput('errors', error_record)
         except Exception as e:
             logging.error(f"Unexpected error parsing claim: {e}")
-            yield beam.pvalue.TaggedOutput('errors', {'error': str(e)})
+            yield pvalue.TaggedOutput('errors', {'error': str(e)})
 
 
 class ValidateClaim(beam.DoFn):
@@ -77,7 +78,7 @@ class ValidateClaim(beam.DoFn):
                     'error_timestamp': datetime.utcnow().isoformat(),
                     'raw_claim': json.dumps(claim)
                 }
-                yield beam.pvalue.TaggedOutput('errors', error_record)
+                yield pvalue.TaggedOutput('errors', error_record)
                 return
             
             # Validate claim amount
@@ -88,7 +89,7 @@ class ValidateClaim(beam.DoFn):
                     'error': f"Invalid claim_amount: {claim_amount}",
                     'error_timestamp': datetime.utcnow().isoformat()
                 }
-                yield beam.pvalue.TaggedOutput('errors', error_record)
+                yield pvalue.TaggedOutput('errors', error_record)
                 return
             
             # Validate patient age if present
@@ -100,13 +101,13 @@ class ValidateClaim(beam.DoFn):
                         'error': f"Invalid patient_age: {age}",
                         'error_timestamp': datetime.utcnow().isoformat()
                     }
-                    yield beam.pvalue.TaggedOutput('errors', error_record)
+                    yield pvalue.TaggedOutput('errors', error_record)
                     return
             
             # Add processing timestamp
             claim['processing_timestamp'] = datetime.utcnow().isoformat()
             
-            yield beam.pvalue.TaggedOutput('success', claim)
+            yield pvalue.TaggedOutput('success', claim)
             
         except Exception as e:
             logging.error(f"Validation error for claim: {e}")
@@ -115,7 +116,7 @@ class ValidateClaim(beam.DoFn):
                 'error': str(e),
                 'error_timestamp': datetime.utcnow().isoformat()
             }
-            yield beam.pvalue.TaggedOutput('errors', error_record)
+            yield pvalue.TaggedOutput('errors', error_record)
 
 
 class EnrichClaim(beam.DoFn):
