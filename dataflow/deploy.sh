@@ -11,6 +11,8 @@ STAGING_LOCATION="gs://${PROJECT_ID}-dataflow-temp/staging"
 INPUT_SUBSCRIPTION="projects/${PROJECT_ID}/subscriptions/claims-sub"
 OUTPUT_TABLE="${PROJECT_ID}:aetna.claims_events_stream"
 ERROR_TABLE="${PROJECT_ID}:aetna.processing_errors"
+SPANNER_INSTANCE="healthcare-claims"
+SPANNER_DATABASE="claims-db"
 JOB_NAME="healthcare-claims-streaming-$(date +%Y%m%d-%H%M%S)"
 
 echo "========================================================================"
@@ -42,6 +44,8 @@ python streaming_pipeline.py \
   --input_subscription=${INPUT_SUBSCRIPTION} \
   --output_table=${OUTPUT_TABLE} \
   --error_table=${ERROR_TABLE} \
+  --spanner_instance=${SPANNER_INSTANCE} \
+  --spanner_database=${SPANNER_DATABASE} \
   --job_name=${JOB_NAME} \
   --streaming \
   --requirements_file=requirements.txt \

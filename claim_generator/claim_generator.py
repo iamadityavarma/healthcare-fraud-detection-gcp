@@ -145,28 +145,80 @@ def generate_synthetic_claim(fraud_rate: float = 0.05) -> Dict:
         
         # Generate patient demographics
         patient_age = random.randint(0, 95)
+        patient_gender = random.choice(GENDERS)
+        place_of_service = random.choice(PLACES)
         
-        # ===== Fraud Detection Heuristics (for demo purposes) =====
-        # These create synthetic fraud signals for ML model training
-        fraud_signal = 0
+        # ===== Fraud Detection with Moderate Noise =====
+        # Creates fraud labels with ~88-95% accuracy potential
+        # Reduced randomization for clearer patterns
         
-        # Signal 1: High-cost claims are suspicious (60% probability)
-        if claim_amount > 5000 and random.random() < 0.6:
-            fraud_signal = 1
+        fraud_score = 0.0
         
-        # Signal 2: Very young patients with very high costs are suspicious
-        if patient_age < 2 and claim_amount > 10000:
-            fraud_signal = 1
+        # Signal 1: High-cost claims (stronger signal)
+        if claim_amount > 5000:
+            fraud_score += random.uniform(0.3, 0.5)  # Stronger impact
         
-        # Signal 3: Random fraud injection based on fraud_rate
-        if random.random() < fraud_rate:
-            fraud_signal = 1
+        # Signal 2: Very young patients with high costs (stronger)
+        if patient_age < 5 and claim_amount > 8000:
+            fraud_score += random.uniform(0.25, 0.4)
+        
+        # Signal 3: ER visits with high amounts (clearer signal)
+        if place_of_service == "ER" and claim_amount > 7000:
+            fraud_score += random.uniform(0.15, 0.3)
+        
+        # Signal 4: Delayed submission (moderate signal)
+        days_delay = abs((datetime.date.fromisoformat(submission_date) - 
+                         datetime.date.fromisoformat(service_date)).days)
+        if days_delay > 60:
+            fraud_score += random.uniform(0.1, 0.25)
+        
+        # Signal 5: Baseline fraud rate (reduced randomness)
+        fraud_score += random.uniform(0, fraud_rate * 1.5)
+        
+        # Add moderate noise (±10% instead of ±20%)
+        noise = random.uniform(-0.1, 0.1)
+        fraud_score = max(0, min(1, fraud_score + noise))
+        
+        # Less fuzzy threshold
+        threshold = random.uniform(0.48, 0.52)  # Tighter range
+        fraud_signal = 1 if fraud_score > threshold else 0
+        
+        # Reduced label noise (2% instead of 5%)
+        if random.random() < 0.02:
+            fraud_signal = 1 - fraud_signal  # Flip label
 
         # Select 1-2 diagnosis codes (weighted to prefer 1 code)
         diagnosis_codes = random.sample(DIAG_CODES, k=random.choice([1, 1, 2]))
         
         # Select 1-2 procedure codes (weighted to prefer 1 code)
         procedure_codes = random.sample(PROC_CODES, k=random.choice([1, 1, 2]))
+
+        # ===== Add Missing Values (5-8% missing for realism) =====
+        # Reduced missing values for better model performance
+        
+        # 5% chance patient_age is missing
+        if random.random() < 0.05:
+            patient_age = None
+        
+        # 8% chance dates are missing
+        if random.random() < 0.08:
+            service_date = None
+        if random.random() < 0.08:
+            submission_date = None
+        
+        # 3% chance place_of_service is missing
+        if random.random() < 0.03:
+            place_of_service = None
+        
+        # 5% chance patient_gender is missing
+        if random.random() < 0.05:
+            patient_gender = None
+        
+        # 3% chance provider_region is missing
+        if random.random() < 0.03:
+            provider_region = None
+        else:
+            provider_region = provider["region"]
 
         # Construct the claim object
         claim = {
@@ -180,10 +232,10 @@ def generate_synthetic_claim(fraud_rate: float = 0.05) -> Dict:
             "service_date": service_date,
             "submission_date": submission_date,
             "claim_status": random.choices(STATUSES, weights=[0.8, 0.15, 0.05])[0],
-            "provider_region": provider["region"],
+            "provider_region": provider_region,
             "patient_age": patient_age,
-            "patient_gender": random.choice(GENDERS),
-            "place_of_service": random.choice(PLACES),
+            "patient_gender": patient_gender,
+            "place_of_service": place_of_service,
             "notes": "Synthetic claim for demo purposes",
             "ingest_ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "synthetic_label_is_fraud": fraud_signal

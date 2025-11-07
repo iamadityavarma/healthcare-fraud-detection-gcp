@@ -4,14 +4,22 @@ Airflow DAGs for orchestrating ML retraining and data quality checks.
 
 ## DAGs
 
-### 1. retrain_fraud_model (Weekly)
-Retrains the fraud detection model on fresh data.
+### 1. retrain_fraud_model (Drift-Based)
+Intelligently retrains the fraud detection model only when needed.
 
-**Schedule**: Every Sunday at 2 AM
+**Schedule**: Daily at 8 AM (checks for drift, retrains only if necessary)
+**Retraining Triggers**:
+- **Data drift detected** (Kolmogorov-Smirnov test, p-value < 0.05)
+- **100+ new fraud cases** (enough new examples to improve model)
+- **Performance degradation** (ROC AUC drops > 10%)
+
 **Tasks**:
-1. Check data quality (enough claims to retrain)
-2. Run training script
-3. Validate new model
+1. Detect data drift using KS test on all features
+2. Check for sufficient new fraud cases
+3. Branch: Skip or proceed with retraining
+4. If retraining: Check data quality → Train → Validate
+
+**Cost Savings**: Only retrains when necessary, saving ~75% of compute costs vs weekly schedule
 
 ### 2. data_quality_checks (Daily)
 Monitors data quality and processing health.

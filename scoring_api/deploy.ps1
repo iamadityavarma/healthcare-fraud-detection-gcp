@@ -15,7 +15,7 @@ gcloud run deploy $SERVICE_NAME `
     --region=$REGION `
     --platform=managed `
     --allow-unauthenticated `
-    --set-env-vars="MODEL_BUCKET=health-data-analytics-477220-models,MODEL_NAME=fraud-detector-v1" `
+    --set-env-vars="MODEL_BUCKET=health-data-analytics-477220-models,MODEL_NAME=fraud-detector-v3-smote" `
     --memory=1Gi `
     --cpu=1 `
     --timeout=300 `
